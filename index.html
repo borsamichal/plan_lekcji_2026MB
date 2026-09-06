@@ -109,8 +109,8 @@
 </div>
 
 <script>
-  // WKLEJ TUTAJ LINK DO OPUBLIKOWANEGO CSV Z ARKUSZA GOOGLE
-  const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQGAWZRXJay0rktz24q6o_p-mbAYiw2bNLNvA8UMNuzNzRarMBlaOdZRkJ1NoSnqXuF6GYbhmIrk4lF/pub?gid=0&single=true&output=csv';
+  // WKLEJ SWÓJ LINK TUTAJ:
+  const CSV_URL = 'TUTAJ_TWOJ_LINK_DO_CSV';
 
   const dayMap = {
     1: 'Poniedziałek',
@@ -128,19 +128,37 @@
     select.value = (today >= 1 && today <= 5) ? today : 1;
   }
 
+  function normalizeText(txt) {
+    return (txt || '').toString().trim().toLowerCase();
+  }
+
   function parseCSV(text) {
-    const lines = text.trim().split('\n');
+    // Rozbicie na linie (obsługa formatu Windows \r\n i Linux \n)
+    const lines = text.trim().split(/\r?\n/);
     const result = [];
+    if (lines.length < 2) return result;
+
+    // Automatyczne wykrycie separatora w nagłówku (; czy , czy tabulator)
+    const header = lines[0];
+    let delimiter = ',';
+    if (header.includes(';')) delimiter = ';';
+    else if (header.includes('\t')) delimiter = '\t';
+
     for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+      const rawLine = lines[i].trim();
+      if (!rawLine) continue;
+
+      const cols = rawLine.split(delimiter).map(c => c.trim().replace(/^"|"$/g, ''));
+
+      // Wymagamy minimum 6 kolumn (Dzien, Nr, Start, Koniec, Klasa, Przedmiot)
       if (cols.length >= 6) {
         result.push({
           day: cols[0],
           nr: cols[1],
           start: cols[2],
           end: cols[3],
-          className: cols[4], // np. 3A, 2C gr 1
-          subject: cols[5],   // np. Informatyka
+          className: cols[4],
+          subject: cols[5],
           room: cols[6] || ''
         });
       }
@@ -149,8 +167,9 @@
   }
 
   function toSeconds(timeStr) {
-    const [h, m] = timeStr.split(':').map(Number);
-    return (h * 3600) + (m * 60);
+    if (!timeStr || !timeStr.includes(':')) return 0;
+    const parts = timeStr.split(':').map(Number);
+    return (parts[0] * 3600) + (parts[1] * 60);
   }
 
   function formatRemaining(totalSec) {
@@ -164,12 +183,19 @@
     const selectedDayNum = document.getElementById('daySelect').value;
     const selectedDayName = dayMap[selectedDayNum];
 
+    // Porównujemy dni bez względu na wielkość liter i spacje
     const dayLessons = schedule
-      .filter(l => l.day.toLowerCase() === selectedDayName.toLowerCase())
+      .filter(l => normalizeText(l.day) === normalizeText(selectedDayName))
       .sort((a, b) => toSeconds(a.start) - toSeconds(b.start));
 
     if (!dayLessons.length) {
-      container.innerHTML = `<div class="empty-state">Brak zaplanowanych zajęć w: ${selectedDayName}.</div>`;
+      container.innerHTML = `
+        <div class="empty-state">
+          Brak zaplanowanych zajęć w: <strong>${selectedDayName}</strong>.<br>
+          <small style="color: #94a3b8; display: block; margin-top: 8px;">
+            Wczytano w sumie ${schedule.length} wierszy z pliku. Sprawdź, czy nazwa dnia w arkuszu to dokładnie „${selectedDayName}”.
+          </small>
+        </div>`;
       return;
     }
 
@@ -216,7 +242,6 @@
 
     let html = '';
 
-    // Karta: Trwająca lekcja
     if (currentLesson) {
       html += `
         <div class="card current-lesson">
@@ -242,7 +267,6 @@
       html += `<div class="card"><div class="title">Koniec lekcji na dziś! 🎉</div></div>`;
     }
 
-    // Karta: Następna lekcja
     if (nextLesson) {
       const waitInfo = (!currentLesson && !isBreak && isToday && secondsToBell > 0) 
         ? `<div class="timer">Rozpoczęcie za: ${formatRemaining(secondsToBell)}</div>` 
@@ -262,22 +286,35 @@
       `;
     }
 
-    if (!currentLesson && !isBreak && !nextLesson) {
-      html = `<div class="card"><div class="title">Brak zajęć w tym oknie.</div></div>`;
-    }
-
     container.innerHTML = html;
   }
 
   async function loadAndRender() {
+    const container = document.getElementById('cardsContainer');
     try {
-      const res = await fetch(CSV_URL);
+      container.innerHTML = '<div class="empty-state">Wczytywanie planu...</div>';
+      
+      // Dodajemy losowy parametr timestamp (?t=...), aby telefon nie czytał starego cache
+      const fetchUrl = CSV_URL + (CSV_URL.includes('?') ? '&' : '?') + 't=' + Date.now();
+      const res = await fetch(fetchUrl);
+      
+      if (!res.ok) throw new Error(`Błąd HTTP: ${res.status}`);
       const text = await res.text();
+
       schedule = parseCSV(text);
+
+      if (schedule.length === 0) {
+        // Pokaż na ekranie telefonu pierwsze 2 linie pliku, żeby od razu było widać błąd
+        const preview = text.split(/\r?\n/).slice(0, 3).join('\n');
+        throw new Error(`Pobrano plik, ale nie rozpoznano kolumn!\n\nPodgląd pliku:\n${preview}`);
+      }
+
       renderStatus();
     } catch (e) {
-      document.getElementById('cardsContainer').innerHTML = 
-        `<div class="empty-state">Błąd wczytywania danych. Sprawdź łącze internetowe i link do arkusza.</div>`;
+      container.innerHTML = `
+        <div class="empty-state" style="color: #f87171; text-align: left; background: rgba(239, 68, 68, 0.1); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 0.8rem; white-space: pre-wrap;">
+          <strong>DIAGNOSTYKA BŁĘDU:</strong>\n${e.message}
+        </div>`;
     }
   }
 
@@ -287,6 +324,5 @@
   loadAndRender();
   setInterval(renderStatus, 1000);
 </script>
-
 </body>
 </html>
