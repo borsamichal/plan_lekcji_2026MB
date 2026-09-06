@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mój Plan Lekcji</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --accent: #38bdf8;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --lesson: #22c55e;
+      --break: #f59e0b;
+      --badge-bg: rgba(56, 189, 248, 0.15);
+    }
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .container { max-width: 420px; margin: 0 auto; }
+    h1 { font-size: 1.3rem; text-align: center; margin-bottom: 1rem; }
+    .controls { display: flex; gap: 8px; margin-bottom: 16px; }
+    select, button {
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: var(--card-bg);
+      color: var(--text);
+      font-size: 0.95rem;
+      flex: 1;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      border-left: 5px solid var(--accent);
+    }
+    .card.current-lesson { border-left-color: var(--lesson); }
+    .card.break { border-left-color: var(--break); }
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    .class-badge {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #ffffff;
+      background: var(--badge-bg);
+      border: 1px solid var(--accent);
+      padding: 2px 10px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+    .current-lesson .class-badge {
+      border-color: var(--lesson);
+      background: rgba(34, 197, 94, 0.15);
+      color: #4ade80;
+    }
+    .title { font-size: 1.2rem; font-weight: bold; }
+    .time-info { font-size: 0.9rem; color: var(--accent); margin-top: 4px; }
+    .timer {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .current-lesson .timer { color: var(--lesson); }
+    .break .timer { color: var(--break); }
+    .details { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
+    .empty-state { text-align: center; color: var(--text-muted); padding: 20px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Rozkład Zajęć</h1>
+
+  <div class="controls">
+    <select id="daySelect">
+      <option value="1">Poniedziałek</option>
+      <option value="2">Wtorek</option>
+      <option value="3">Środa</option>
+      <option value="4">Czwartek</option>
+      <option value="5">Piątek</option>
+    </select>
+    <button onclick="loadAndRender()">Odśwież</button>
+  </div>
+
+  <div id="cardsContainer">
+    <div class="empty-state">Wczytywanie planu...</div>
+  </div>
+</div>
+
+<script>
+  // WKLEJ TUTAJ LINK DO OPUBLIKOWANEGO CSV Z ARKUSZA GOOGLE
+  const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQGAWZRXJay0rktz24q6o_p-mbAYiw2bNLNvA8UMNuzNzRarMBlaOdZRkJ1NoSnqXuF6GYbhmIrk4lF/pub?gid=0&single=true&output=csv';
+
+  const dayMap = {
+    1: 'Poniedziałek',
+    2: 'Wtorek',
+    3: 'Środa',
+    4: 'Czwartek',
+    5: 'Piątek'
+  };
+
+  let schedule = [];
+
+  function setInitialDay() {
+    const today = new Date().getDay();
+    const select = document.getElementById('daySelect');
+    select.value = (today >= 1 && today <= 5) ? today : 1;
+  }
+
+  function parseCSV(text) {
+    const lines = text.trim().split('\n');
+    const result = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+      if (cols.length >= 6) {
+        result.push({
+          day: cols[0],
+          nr: cols[1],
+          start: cols[2],
+          end: cols[3],
+          className: cols[4], // np. 3A, 2C gr 1
+          subject: cols[5],   // np. Informatyka
+          room: cols[6] || ''
+        });
+      }
+    }
+    return result;
+  }
+
+  function toSeconds(timeStr) {
+    const [h, m] = timeStr.split(':').map(Number);
+    return (h * 3600) + (m * 60);
+  }
+
+  function formatRemaining(totalSec) {
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${m}m ${s < 10 ? '0' : ''}${s}s`;
+  }
+
+  function renderStatus() {
+    const container = document.getElementById('cardsContainer');
+    const selectedDayNum = document.getElementById('daySelect').value;
+    const selectedDayName = dayMap[selectedDayNum];
+
+    const dayLessons = schedule
+      .filter(l => l.day.toLowerCase() === selectedDayName.toLowerCase())
+      .sort((a, b) => toSeconds(a.start) - toSeconds(b.start));
+
+    if (!dayLessons.length) {
+      container.innerHTML = `<div class="empty-state">Brak zaplanowanych zajęć w: ${selectedDayName}.</div>`;
+      return;
+    }
+
+    const now = new Date();
+    const isToday = now.getDay() == selectedDayNum;
+    const currentSec = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
+
+    let currentLesson = null;
+    let isBreak = false;
+    let nextLesson = null;
+    let secondsToBell = 0;
+
+    if (isToday) {
+      const firstLessonStart = toSeconds(dayLessons[0].start);
+      const lastLessonEnd = toSeconds(dayLessons[dayLessons.length - 1].end);
+
+      if (currentSec >= firstLessonStart && currentSec <= lastLessonEnd) {
+        for (let i = 0; i < dayLessons.length; i++) {
+          const startSec = toSeconds(dayLessons[i].start);
+          const endSec = toSeconds(dayLessons[i].end);
+
+          if (currentSec >= startSec && currentSec < endSec) {
+            currentLesson = dayLessons[i];
+            nextLesson = dayLessons[i + 1] || null;
+            secondsToBell = endSec - currentSec;
+            break;
+          } else if (i < dayLessons.length - 1) {
+            const nextStartSec = toSeconds(dayLessons[i + 1].start);
+            if (currentSec >= endSec && currentSec < nextStartSec) {
+              isBreak = true;
+              nextLesson = dayLessons[i + 1];
+              secondsToBell = nextStartSec - currentSec;
+              break;
+            }
+          }
+        }
+      } else if (currentSec < firstLessonStart) {
+        nextLesson = dayLessons[0];
+        secondsToBell = firstLessonStart - currentSec;
+      }
+    } else {
+      nextLesson = dayLessons[0];
+    }
+
+    let html = '';
+
+    // Karta: Trwająca lekcja
+    if (currentLesson) {
+      html += `
+        <div class="card current-lesson">
+          <div class="header-row">
+            <span class="label">Trwa teraz (Lekcja ${currentLesson.nr})</span>
+            <span class="class-badge">${currentLesson.className}</span>
+          </div>
+          <div class="title">${currentLesson.subject}</div>
+          <div class="time-info">${currentLesson.start} – ${currentLesson.end}</div>
+          <div class="details">Sala: ${currentLesson.room || '—'}</div>
+          <div class="timer">🔔 Dzwonek na przerwę za: ${formatRemaining(secondsToBell)}</div>
+        </div>
+      `;
+    } else if (isBreak) {
+      html += `
+        <div class="card break">
+          <div class="label">Przerwa międzylekcyjna</div>
+          <div class="title">Czas wolny ☕</div>
+          <div class="timer">🔔 Dzwonek na lekcję za: ${formatRemaining(secondsToBell)}</div>
+        </div>
+      `;
+    } else if (isToday && currentSec > toSeconds(dayLessons[dayLessons.length - 1].end)) {
+      html += `<div class="card"><div class="title">Koniec lekcji na dziś! 🎉</div></div>`;
+    }
+
+    // Karta: Następna lekcja
+    if (nextLesson) {
+      const waitInfo = (!currentLesson && !isBreak && isToday && secondsToBell > 0) 
+        ? `<div class="timer">Rozpoczęcie za: ${formatRemaining(secondsToBell)}</div>` 
+        : '';
+
+      html += `
+        <div class="card">
+          <div class="header-row">
+            <span class="label">Następne zajęcia (Lekcja ${nextLesson.nr})</span>
+            <span class="class-badge">${nextLesson.className}</span>
+          </div>
+          <div class="title">${nextLesson.subject}</div>
+          <div class="time-info">${nextLesson.start} – ${nextLesson.end}</div>
+          <div class="details">Sala: ${nextLesson.room || '—'}</div>
+          ${waitInfo}
+        </div>
+      `;
+    }
+
+    if (!currentLesson && !isBreak && !nextLesson) {
+      html = `<div class="card"><div class="title">Brak zajęć w tym oknie.</div></div>`;
+    }
+
+    container.innerHTML = html;
+  }
+
+  async function loadAndRender() {
+    try {
+      const res = await fetch(CSV_URL);
+      const text = await res.text();
+      schedule = parseCSV(text);
+      renderStatus();
+    } catch (e) {
+      document.getElementById('cardsContainer').innerHTML = 
+        `<div class="empty-state">Błąd wczytywania danych. Sprawdź łącze internetowe i link do arkusza.</div>`;
+    }
+  }
+
+  document.getElementById('daySelect').addEventListener('change', renderStatus);
+
+  setInitialDay();
+  loadAndRender();
+  setInterval(renderStatus, 1000);
+</script>
+
+</body>
+</html>
