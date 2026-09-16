@@ -3,20 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Plan Lekcji 2</title>
+  <title>Plan Lekcji</title>
   <style>
     :root {
-      /* Tło: głęboka grafitowa czekolada i ciepła czerń */
       --bg-gradient: radial-gradient(circle at top, #2e1005 0%, #0c0a09 100%);
       --card-bg: rgba(28, 25, 23, 0.78);
       --card-border: rgba(251, 146, 60, 0.18);
       
-      /* Akcenty: soczysty pomarańcz i bursztyn */
       --accent-orange: #f97316;
       --accent-glow: rgba(249, 115, 22, 0.35);
       --amber-gold: #fbbf24;
       
-      /* Stany: lekcja (żywy limonkowy seledyn dla kontrastu) / przerwa (neonowy zachód słońca) */
       --lesson-active: #22c55e;
       --lesson-glow: rgba(34, 197, 94, 0.3);
       --break-sunset: #f43f5e;
@@ -37,7 +34,7 @@
     }
 
     .container {
-      max-width: 440px;
+      max-width: 460px;
       margin: 0 auto;
     }
 
@@ -52,7 +49,6 @@
       font-weight: 800;
     }
 
-    /* Pasek kontrolek 3D */
     .controls {
       display: flex;
       gap: 12px;
@@ -114,7 +110,6 @@
       box-shadow: 0 1px 0 #9a3412, 0 4px 8px var(--accent-glow);
     }
 
-    /* Kafelki 3D / Glassmorphism */
     .card {
       background: var(--card-bg);
       backdrop-filter: blur(12px);
@@ -156,7 +151,7 @@
       letter-spacing: 0.08em;
       color: var(--text-muted);
       font-weight: 700;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
 
     .class-title {
@@ -164,7 +159,8 @@
       font-weight: 900;
       letter-spacing: -0.02em;
       color: #ffffff;
-      margin-bottom: 2px;
+      line-height: 1.1;
+      margin-bottom: 4px;
     }
 
     .current-lesson .class-title {
@@ -172,8 +168,15 @@
       text-shadow: 0 0 12px rgba(74, 222, 128, 0.3);
     }
 
+    .subject-info {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #ffedd5;
+      margin-bottom: 6px;
+    }
+
     .time-info {
-      font-size: 1rem;
+      font-size: 0.95rem;
       color: var(--amber-gold);
       font-weight: 600;
     }
@@ -201,7 +204,6 @@
       border-color: rgba(251, 113, 133, 0.25);
     }
 
-    /* Tabela rozkładu dnia */
     .schedule-section {
       margin-top: 24px;
     }
@@ -230,26 +232,25 @@
       width: 100%;
       border-collapse: collapse;
       text-align: left;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
     }
 
     th {
       background: rgba(20, 10, 6, 0.9);
       color: #fb923c;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      padding: 12px 10px;
+      padding: 12px 8px;
       font-weight: 800;
       border-bottom: 1px solid rgba(251, 146, 60, 0.15);
     }
 
     td {
-      padding: 11px 10px;
+      padding: 10px 8px;
       color: #f5f5f4;
     }
 
-    /* Naprzemienne pasy (ciepła ciemna zebra) */
     tbody tr:nth-child(odd) {
       background: rgba(41, 37, 36, 0.45);
     }
@@ -269,21 +270,26 @@
     }
 
     .td-nr {
-      width: 32px;
+      width: 24px;
       text-align: center;
       font-weight: 800;
       color: #a8a29e;
     }
 
     .td-time {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       color: #e7e5e4;
       white-space: nowrap;
     }
 
     .td-class {
-      font-weight: 700;
+      font-weight: 800;
       color: #ffffff;
+      white-space: nowrap;
+    }
+
+    .td-subject {
+      color: #ffedd5;
     }
 
     .td-room {
@@ -305,7 +311,7 @@
 <body>
 
 <div class="container">
-  <h1>Plan Lekcji II</h1>
+  <h1>Plan Lekcji</h1>
 
   <div class="controls">
     <div class="select-wrapper">
@@ -331,8 +337,9 @@
         <thead>
           <tr>
             <th class="td-nr">Nr</th>
-            <th>Godziny</th>
+            <th>Godz.</th>
             <th>Klasa</th>
+            <th>Przedmiot</th>
             <th class="td-room">Sala</th>
           </tr>
         </thead>
@@ -343,7 +350,7 @@
 </div>
 
 <script>
-  // WKLEJ TUTAJ LINK DO SWOJEGO DRUGIEGO ARKUSZA GOOGLE (.CSV)
+  // TUTAJ WKLEJ LINK DO DRUGIEGO ARKUSZA (CSV)
   const CSV_URL = 'TUTAJ_WKLEJ_LINK_DO_DRUGIEGO_ARKUSZA_CSV';
 
   const dayMap = {
@@ -374,6 +381,8 @@
       if (!line) continue;
 
       const cols = line.split(delimiter).map(c => c.trim().replace(/^"|"$/g, ''));
+      
+      // Dopasowanie do 7 kolumn: Dzien, Nr, Start, Koniec, Klasa, Przedmiot, Sala
       if (cols.length >= 5) {
         result.push({
           day: cols[0],
@@ -381,7 +390,8 @@
           start: cols[2],
           end: cols[3],
           className: cols[4],
-          room: cols[5] || '—'
+          subject: cols[5] || '',
+          room: cols[6] || '—'
         });
       }
     }
@@ -466,10 +476,12 @@
     let cardsHtml = '';
 
     if (currentLesson) {
+      const subjectHtml = currentLesson.subject ? `<div class="subject-info">${currentLesson.subject}</div>` : '';
       cardsHtml += `
         <div class="card current-lesson">
           <div class="label">Trwa teraz (Lekcja ${currentLesson.nr})</div>
           <div class="class-title">${currentLesson.className}</div>
+          ${subjectHtml}
           <div class="time-info">${currentLesson.start} – ${currentLesson.end} ${currentLesson.room !== '—' ? '• Sala ' + currentLesson.room : ''}</div>
           <div class="timer">🔔 Dzwonek na przerwę za: ${formatRemaining(secondsToBell)}</div>
         </div>
@@ -490,16 +502,17 @@
       const waitInfo = (!currentLesson && !isBreak && isToday && secondsToBell > 0) 
         ? `<div class="timer">Rozpoczęcie za: ${formatRemaining(secondsToBell)}</div>` 
         : '';
+      const subjectHtml = nextLesson.subject ? `<div class="subject-info">${nextLesson.subject}</div>` : '';
 
-      html = `
+      cardsHtml += `
         <div class="card">
           <div class="label">Następne zajęcia (Lekcja ${nextLesson.nr})</div>
           <div class="class-title">${nextLesson.className}</div>
+          ${subjectHtml}
           <div class="time-info">${nextLesson.start} – ${nextLesson.end} ${nextLesson.room !== '—' ? '• Sala ' + nextLesson.room : ''}</div>
           ${waitInfo}
         </div>
       `;
-      cardsHtml += html;
     }
 
     cardsContainer.innerHTML = cardsHtml;
@@ -512,8 +525,9 @@
       rowsHtml += `
         <tr class="${isCurrent ? 'active-row' : ''}">
           <td class="td-nr">${l.nr}</td>
-          <td class="td-time">${l.start} – ${l.end}</td>
+          <td class="td-time">${l.start}–${l.end}</td>
           <td class="td-class">${l.className}</td>
+          <td class="td-subject">${l.subject || '—'}</td>
           <td class="td-room">${l.room}</td>
         </tr>
       `;
