@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plan Lekcji 2</title>
+  <style>
+    :root {
+      /* Tło: głęboka grafitowa czekolada i ciepła czerń */
+      --bg-gradient: radial-gradient(circle at top, #2e1005 0%, #0c0a09 100%);
+      --card-bg: rgba(28, 25, 23, 0.78);
+      --card-border: rgba(251, 146, 60, 0.18);
+      
+      /* Akcenty: soczysty pomarańcz i bursztyn */
+      --accent-orange: #f97316;
+      --accent-glow: rgba(249, 115, 22, 0.35);
+      --amber-gold: #fbbf24;
+      
+      /* Stany: lekcja (żywy limonkowy seledyn dla kontrastu) / przerwa (neonowy zachód słońca) */
+      --lesson-active: #22c55e;
+      --lesson-glow: rgba(34, 197, 94, 0.3);
+      --break-sunset: #f43f5e;
+      --break-glow: rgba(244, 63, 94, 0.3);
+
+      --text: #fff7ed;
+      --text-muted: #a8a29e;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px 16px 40px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg-gradient);
+      min-height: 100vh;
+      box-sizing: border-box;
+      color: var(--text);
+    }
+
+    .container {
+      max-width: 440px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      text-align: center;
+      margin: 0 0 1.25rem 0;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #fb923c, #facc15);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 800;
+    }
+
+    /* Pasek kontrolek 3D */
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .select-wrapper {
+      position: relative;
+      flex: 2;
+    }
+
+    select {
+      width: 100%;
+      appearance: none;
+      -webkit-appearance: none;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid #7c2d12;
+      background: linear-gradient(180deg, #431407 0%, #1c0b05 100%);
+      color: #ffedd5;
+      font-size: 1rem;
+      font-weight: 600;
+      box-shadow: 0 4px 0 #1c0b05, 0 8px 15px rgba(0, 0, 0, 0.5);
+      cursor: pointer;
+      outline: none;
+    }
+
+    .select-wrapper::after {
+      content: '▼';
+      font-size: 0.75rem;
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #fdba74;
+      pointer-events: none;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid #c2410c;
+      background: linear-gradient(180deg, #ea580c 0%, #c2410c 100%);
+      color: #ffffff;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #9a3412, 0 8px 15px var(--accent-glow);
+      transition: all 0.08s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    button:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #9a3412, 0 4px 8px var(--accent-glow);
+    }
+
+    /* Kafelki 3D / Glassmorphism */
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 18px 20px;
+      margin-bottom: 14px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 6px;
+      background: var(--accent-orange);
+    }
+
+    .card.current-lesson {
+      border-color: rgba(34, 197, 94, 0.4);
+      box-shadow: 0 10px 25px -5px var(--lesson-glow);
+    }
+    .card.current-lesson::before { background: var(--lesson-active); }
+
+    .card.break {
+      border-color: rgba(244, 63, 94, 0.4);
+      box-shadow: 0 10px 25px -5px var(--break-glow);
+    }
+    .card.break::before { background: var(--break-sunset); }
+
+    .label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .class-title {
+      font-size: 1.75rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+      margin-bottom: 2px;
+    }
+
+    .current-lesson .class-title {
+      color: #4ade80;
+      text-shadow: 0 0 12px rgba(74, 222, 128, 0.3);
+    }
+
+    .time-info {
+      font-size: 1rem;
+      color: var(--amber-gold);
+      font-weight: 600;
+    }
+
+    .timer {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 12px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      background: rgba(12, 10, 9, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .current-lesson .timer {
+      color: #4ade80;
+      border-color: rgba(74, 222, 128, 0.25);
+    }
+
+    .break .timer {
+      color: #fb7185;
+      border-color: rgba(251, 113, 133, 0.25);
+    }
+
+    /* Tabela rozkładu dnia */
+    .schedule-section {
+      margin-top: 24px;
+    }
+
+    .section-header {
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 800;
+      color: #d6d3d1;
+      margin-bottom: 10px;
+      padding-left: 4px;
+    }
+
+    .table-container {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: rgba(20, 10, 6, 0.9);
+      color: #fb923c;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 12px 10px;
+      font-weight: 800;
+      border-bottom: 1px solid rgba(251, 146, 60, 0.15);
+    }
+
+    td {
+      padding: 11px 10px;
+      color: #f5f5f4;
+    }
+
+    /* Naprzemienne pasy (ciepła ciemna zebra) */
+    tbody tr:nth-child(odd) {
+      background: rgba(41, 37, 36, 0.45);
+    }
+
+    tbody tr:nth-child(even) {
+      background: rgba(68, 64, 60, 0.35);
+    }
+
+    tbody tr.active-row {
+      background: rgba(34, 197, 94, 0.18) !important;
+      border-left: 4px solid var(--lesson-active);
+    }
+
+    tbody tr.active-row td {
+      color: #86efac;
+      font-weight: bold;
+    }
+
+    .td-nr {
+      width: 32px;
+      text-align: center;
+      font-weight: 800;
+      color: #a8a29e;
+    }
+
+    .td-time {
+      font-size: 0.8rem;
+      color: #e7e5e4;
+      white-space: nowrap;
+    }
+
+    .td-class {
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .td-room {
+      text-align: center;
+      color: #fdba74;
+      font-weight: 600;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 32px 16px;
+      background: var(--card-bg);
+      border-radius: 16px;
+      border: 1px dashed var(--card-border);
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Plan Lekcji II</h1>
+
+  <div class="controls">
+    <div class="select-wrapper">
+      <select id="daySelect">
+        <option value="1">Poniedziałek</option>
+        <option value="2">Wtorek</option>
+        <option value="3">Środa</option>
+        <option value="4">Czwartek</option>
+        <option value="5">Piątek</option>
+      </select>
+    </div>
+    <button onclick="loadAndRender()">↻ Odśwież</button>
+  </div>
+
+  <div id="cardsContainer">
+    <div class="empty-state">Ładowanie rozkładu zajęć...</div>
+  </div>
+
+  <div class="schedule-section" id="scheduleSection" style="display: none;">
+    <div class="section-header" id="scheduleHeader">Rozkład na dziś</div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="td-nr">Nr</th>
+            <th>Godziny</th>
+            <th>Klasa</th>
+            <th class="td-room">Sala</th>
+          </tr>
+        </thead>
+        <tbody id="scheduleTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  // WKLEJ TUTAJ LINK DO SWOJEGO DRUGIEGO ARKUSZA GOOGLE (.CSV)
+  const CSV_URL = 'TUTAJ_WKLEJ_LINK_DO_DRUGIEGO_ARKUSZA_CSV';
+
+  const dayMap = {
+    1: 'Poniedziałek',
+    2: 'Wtorek',
+    3: 'Środa',
+    4: 'Czwartek',
+    5: 'Piątek'
+  };
+
+  let schedule = [];
+
+  function setInitialDay() {
+    const today = new Date().getDay();
+    const select = document.getElementById('daySelect');
+    select.value = (today >= 1 && today <= 5) ? today : 1;
+  }
+
+  function parseCSV(text) {
+    const lines = text.trim().split(/\r?\n/);
+    const result = [];
+    if (lines.length < 2) return result;
+
+    const delimiter = lines[0].includes(';') ? ';' : ',';
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      const cols = line.split(delimiter).map(c => c.trim().replace(/^"|"$/g, ''));
+      if (cols.length >= 5) {
+        result.push({
+          day: cols[0],
+          nr: cols[1],
+          start: cols[2],
+          end: cols[3],
+          className: cols[4],
+          room: cols[5] || '—'
+        });
+      }
+    }
+    return result;
+  }
+
+  function toSeconds(timeStr) {
+    if (!timeStr || !timeStr.includes(':')) return 0;
+    const parts = timeStr.trim().split(':').map(Number);
+    const h = parts[0] || 0;
+    const m = parts[1] || 0;
+    const s = parts[2] || 0;
+    return (h * 3600) + (m * 60) + s;
+  }
+
+  function formatRemaining(totalSec) {
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${m}m ${s < 10 ? '0' : ''}${s}s`;
+  }
+
+  function renderStatus() {
+    const cardsContainer = document.getElementById('cardsContainer');
+    const scheduleSection = document.getElementById('scheduleSection');
+    const scheduleHeader = document.getElementById('scheduleHeader');
+    const scheduleTableBody = document.getElementById('scheduleTableBody');
+
+    const selectedDayNum = document.getElementById('daySelect').value;
+    const selectedDayName = dayMap[selectedDayNum];
+
+    const dayLessons = schedule
+      .filter(l => (l.day || '').trim().toLowerCase() === selectedDayName.toLowerCase())
+      .sort((a, b) => toSeconds(a.start) - toSeconds(b.start));
+
+    if (!dayLessons.length) {
+      cardsContainer.innerHTML = `<div class="empty-state">Brak zaplanowanych zajęć w dniu: <strong>${selectedDayName}</strong>.</div>`;
+      scheduleSection.style.display = 'none';
+      return;
+    }
+
+    const now = new Date();
+    const isToday = now.getDay() == selectedDayNum;
+    const currentSec = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
+
+    let currentLesson = null;
+    let isBreak = false;
+    let nextLesson = null;
+    let secondsToBell = 0;
+
+    if (isToday) {
+      const firstStart = toSeconds(dayLessons[0].start);
+      const lastEnd = toSeconds(dayLessons[dayLessons.length - 1].end);
+
+      if (currentSec >= firstStart && currentSec <= lastEnd) {
+        for (let i = 0; i < dayLessons.length; i++) {
+          const startSec = toSeconds(dayLessons[i].start);
+          const endSec = toSeconds(dayLessons[i].end);
+
+          if (currentSec >= startSec && currentSec < endSec) {
+            currentLesson = dayLessons[i];
+            nextLesson = dayLessons[i + 1] || null;
+            secondsToBell = endSec - currentSec;
+            break;
+          } else if (i < dayLessons.length - 1) {
+            const nextStartSec = toSeconds(dayLessons[i + 1].start);
+            if (currentSec >= endSec && currentSec < nextStartSec) {
+              isBreak = true;
+              nextLesson = dayLessons[i + 1];
+              secondsToBell = nextStartSec - currentSec;
+              break;
+            }
+          }
+        }
+      } else if (currentSec < firstStart) {
+        nextLesson = dayLessons[0];
+        secondsToBell = firstStart - currentSec;
+      }
+    } else {
+      nextLesson = dayLessons[0];
+    }
+
+    let cardsHtml = '';
+
+    if (currentLesson) {
+      cardsHtml += `
+        <div class="card current-lesson">
+          <div class="label">Trwa teraz (Lekcja ${currentLesson.nr})</div>
+          <div class="class-title">${currentLesson.className}</div>
+          <div class="time-info">${currentLesson.start} – ${currentLesson.end} ${currentLesson.room !== '—' ? '• Sala ' + currentLesson.room : ''}</div>
+          <div class="timer">🔔 Dzwonek na przerwę za: ${formatRemaining(secondsToBell)}</div>
+        </div>
+      `;
+    } else if (isBreak) {
+      cardsHtml += `
+        <div class="card break">
+          <div class="label">Przerwa międzylekcyjna</div>
+          <div class="class-title">Czas wolny ☕</div>
+          <div class="timer">🔔 Dzwonek na lekcję za: ${formatRemaining(secondsToBell)}</div>
+        </div>
+      `;
+    } else if (isToday && currentSec > toSeconds(dayLessons[dayLessons.length - 1].end)) {
+      cardsHtml += `<div class="card"><div class="class-title" style="font-size: 1.3rem;">Koniec lekcji na dziś! 🎉</div></div>`;
+    }
+
+    if (nextLesson) {
+      const waitInfo = (!currentLesson && !isBreak && isToday && secondsToBell > 0) 
+        ? `<div class="timer">Rozpoczęcie za: ${formatRemaining(secondsToBell)}</div>` 
+        : '';
+
+      html = `
+        <div class="card">
+          <div class="label">Następne zajęcia (Lekcja ${nextLesson.nr})</div>
+          <div class="class-title">${nextLesson.className}</div>
+          <div class="time-info">${nextLesson.start} – ${nextLesson.end} ${nextLesson.room !== '—' ? '• Sala ' + nextLesson.room : ''}</div>
+          ${waitInfo}
+        </div>
+      `;
+      cardsHtml += html;
+    }
+
+    cardsContainer.innerHTML = cardsHtml;
+
+    scheduleHeader.textContent = `Rozkład: ${selectedDayName}`;
+    let rowsHtml = '';
+
+    dayLessons.forEach(l => {
+      const isCurrent = currentLesson && currentLesson.nr === l.nr;
+      rowsHtml += `
+        <tr class="${isCurrent ? 'active-row' : ''}">
+          <td class="td-nr">${l.nr}</td>
+          <td class="td-time">${l.start} – ${l.end}</td>
+          <td class="td-class">${l.className}</td>
+          <td class="td-room">${l.room}</td>
+        </tr>
+      `;
+    });
+
+    scheduleTableBody.innerHTML = rowsHtml;
+    scheduleSection.style.display = 'block';
+  }
+
+  async function loadAndRender() {
+    const cardsContainer = document.getElementById('cardsContainer');
+    try {
+      cardsContainer.innerHTML = '<div class="empty-state">Wczytywanie planu...</div>';
+      const fetchUrl = CSV_URL + (CSV_URL.includes('?') ? '&' : '?') + 't=' + Date.now();
+      const res = await fetch(fetchUrl);
+      if (!res.ok) throw new Error('Błąd pobierania pliku.');
+      const text = await res.text();
+      schedule = parseCSV(text);
+      renderStatus();
+    } catch (e) {
+      cardsContainer.innerHTML = `<div class="empty-state" style="color: #f87171;">Błąd ładowania danych. Upewnij się, że link do CSV jest poprawny.</div>`;
+    }
+  }
+
+  document.getElementById('daySelect').addEventListener('change', renderStatus);
+
+  setInitialDay();
+  loadAndRender();
+  setInterval(renderStatus, 1000);
+</script>
+
+</body>
+</html>
